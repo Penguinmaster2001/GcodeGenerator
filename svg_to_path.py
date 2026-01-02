@@ -42,9 +42,10 @@ def generate_path_from_svg(
             path_y.append(settings["bed_depth"] - pt.imag)
             path_num.append(p)
 
-        # pt = path.point(0.0)
-        # x.append(pt.real)
-        # y.append(pt.imag)
+        pt = path.point(0.0)
+        path_x.append(pt.real)
+        path_y.append(settings["bed_depth"] - pt.imag)
+        path_num.append(p)
 
     for layer in range(layers):
         last_p = path_num[0]

@@ -25,9 +25,6 @@ settings = {
 
 
 def display(points):
-    fig = plt.figure()
-    ax = fig.add_subplot(projection="3d")
-
     x_pts = []
     y_pts = []
     z_pts = []
@@ -36,9 +33,16 @@ def display(points):
         y_pts.append(y)
         z_pts.append(z)
 
+    display_xyz(x_pts, y_pts, z_pts)
+
+
+def display_xyz(x, y, z):
+    fig = plt.figure()
+    ax = fig.add_subplot(projection="3d")
+
     # ax.scatter(x, y, z)
     # ax.plot_surface(x, y, z)
-    ax.plot(x_pts, y_pts, z_pts)
+    ax.plot(x, y, z)
     # ax.plot3D(x, y, z)
 
     ax.set_aspect("equal")
@@ -158,7 +162,7 @@ def display_gcode(gcode_file):
     if num_ratio > 0:
         print(ave_ratio / num_ratio)
 
-    display(x, y, z)
+    display_xyz(x, y, z)
 
 
 def display_curve():
