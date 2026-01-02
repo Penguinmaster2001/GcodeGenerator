@@ -24,13 +24,21 @@ settings = {
 }
 
 
-def display(x, y, z):
+def display(points):
     fig = plt.figure()
     ax = fig.add_subplot(projection="3d")
 
+    x_pts = []
+    y_pts = []
+    z_pts = []
+    for x, y, z in [(p.x, p.y, height_at_layer(p.layer)) for p in points]:
+        x_pts.append(x)
+        y_pts.append(y)
+        z_pts.append(z)
+
     # ax.scatter(x, y, z)
     # ax.plot_surface(x, y, z)
-    ax.plot(x, y, z)
+    ax.plot(x_pts, y_pts, z_pts)
     # ax.plot3D(x, y, z)
 
     ax.set_aspect("equal")
@@ -162,9 +170,16 @@ def height_at_layer(layer: int):
     return settings["first_layer_height"] + (layer * settings["layer_height"])
 
 
-def generate_gcode(path):
-    points = curve()
+def generate_curve(path):
+    generate_gcode(path, curve())
 
+
+def generate_svg(path):
+    generate_gcode(path, svg_to_path.generate_path_from_svg(path, 200, 50, settings))
+
+
+
+def generate_gcode(path, points: list[GcodePoint]):
     text = ""
     with open("Fragments/starter.gcode", "r") as f:
         text += f.read()
@@ -203,7 +218,7 @@ def generate_gcode(path):
 
         if not np.isclose(cz, lz, atol=0.001):
             vals.append(f"Z{cz:.3f}")
-            extrusion = -0.05
+            extrusion = 0.0
 
         extrusion = settings["flow_rate"] * np.sqrt(extrusion)
         # If no extrusion, ignore
@@ -225,15 +240,16 @@ def generate_gcode(path):
 
 
 def display_svg(path):
-    x, y, z = svg_to_path.generate_path_from_svg(path, 200, 200, settings)
-    display(x, y, z)
+    points = svg_to_path.generate_path_from_svg(path, 200, 50, settings)
+    display(points)
 
 
 commands: dict[str, tuple[Any, int]] = {
-    "disp": (display_gcode_file, 1),
+    "disp-file": (display_gcode_file, 1),
     "disp-curve": (display_curve, 1),
-    "gen": (generate_gcode, 1),
+    "gen-curve": (generate_curve, 1),
     "disp-svg": (display_svg, 1),
+    "gen-svg": (generate_svg, 1),
 }
 
 
