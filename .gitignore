@@ -3,7 +3,14 @@
 GcodeSamples/
 Output/
 Testing/
+Models/
 !Fragments/**
+
+
+bin/
+lib64
+share/
+pyvenv.cfg
 
 
 # Python.gitignore

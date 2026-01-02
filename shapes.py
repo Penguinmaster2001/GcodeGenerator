@@ -3,11 +3,14 @@
 
 import re
 import sys
+from typing import Any
 
 import matplotlib.pyplot as plt
 import matplotlib.style as mplstyle
 import numpy as np
 from numpy.typing import NDArray
+
+import svg_to_path
 
 mplstyle.use(["dark_background", "ggplot", "fast"])
 
@@ -44,9 +47,9 @@ def curve():
         ) / 5.0
 
     def r3(theta, height):
-        return 2.0 * (1.0 + (((2.0 * height / 40.0) - 1.0) * np.cos(theta)))
+        return 2.0 * (1.0 + (((2.0 * height / 20.0) - 1.0) * np.cos(theta)))
 
-    return polar(200, 400, 10.0, 200, 200, r3)
+    return polar(200, 200, 8.0, 200, 200, r3)
 
 
 def polar(
@@ -66,7 +69,7 @@ def polar(
         layers,
         endpoint=False,
     ):
-        x.extend((scale * radius_func(theta, h) * np.cos(theta)) + (0.5 * width) - (h))
+        x.extend((scale * radius_func(theta, h) * np.cos(theta)) + (0.5 * width))
         y.extend((scale * radius_func(theta, h) * np.sin(theta)) + (0.5 * depth))
         z.extend(np.full(steps, h))
 
@@ -213,10 +216,16 @@ def generate_gcode(path):
         f.write(text)
 
 
-commands = {
-    "disp": display_gcode_file,
-    "disp-curve": display_curve,
-    "gen": generate_gcode,
+def display_svg(path):
+    x, y, z = svg_to_path.generate_path_from_svg(path, 200, 200, settings)
+    display(x, y, z)
+
+
+commands: dict[str, tuple[Any, int]] = {
+    "disp": (display_gcode_file, 1),
+    "disp-curve": (display_curve, 1),
+    "gen": (generate_gcode, 1),
+    "disp-svg": (display_svg, 1),
 }
 
 
@@ -232,4 +241,4 @@ if command is None:
     print(f'command unknown "{command_name}"')
     exit(2)
 
-command(file)
+command[0](file)
