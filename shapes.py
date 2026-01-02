@@ -8,9 +8,9 @@ from typing import Any
 import matplotlib.pyplot as plt
 import matplotlib.style as mplstyle
 import numpy as np
-from numpy.typing import NDArray
 
 import svg_to_path
+from gcode_types import GcodePoint
 
 mplstyle.use(["dark_background", "ggplot", "fast"])
 
@@ -37,7 +37,7 @@ def display(x, y, z):
     plt.show()
 
 
-def curve():
+def curve() -> list[GcodePoint]:
     def r1(theta, height):
         return 1.5 + (1.2 * np.cos(3.0 * theta))
 
@@ -54,26 +54,28 @@ def curve():
 
 def polar(
     steps: int, layers: int, scale: float, width: float, depth: float, radius_func
-) -> tuple[NDArray, NDArray, NDArray]:
+) -> list[GcodePoint]:
     theta = np.linspace(0, 2 * np.pi, steps)
 
-    x: list[float] = []
-    y: list[float] = []
-    z: list[float] = []
+    points: list[GcodePoint] = []
 
     print(f"Height: {layers * settings['layer_height']}")
 
-    for h in np.linspace(
-        settings["first_layer_height"],
-        settings["first_layer_height"] + (layers * settings["layer_height"]),
-        layers,
-        endpoint=False,
+    for layer, height in enumerate(
+        np.linspace(
+            settings["first_layer_height"],
+            settings["first_layer_height"] + (layers * settings["layer_height"]),
+            layers,
+            endpoint=False,
+        )
     ):
-        x.extend((scale * radius_func(theta, h) * np.cos(theta)) + (0.5 * width))
-        y.extend((scale * radius_func(theta, h) * np.sin(theta)) + (0.5 * depth))
-        z.extend(np.full(steps, h))
+        for x, y in zip(
+            (scale * radius_func(theta, height) * np.cos(theta)) + (0.5 * width),
+            (scale * radius_func(theta, height) * np.sin(theta)) + (0.5 * depth),
+        ):
+            points.append(GcodePoint(x, y, layer, True))
 
-    return np.array(x), np.array(y), np.array(z)
+    return points  # np.array(x), np.array(y), np.array(z)
 
 
 pattern = re.compile(
@@ -156,18 +158,24 @@ def display_curve(_):
     display(x, y, z)
 
 
+def height_at_layer(layer: int):
+    return settings["first_layer_height"] + (layer * settings["layer_height"])
+
+
 def generate_gcode(path):
-    x, y, z = curve()
+    points = curve()
 
     text = ""
     with open("Fragments/starter.gcode", "r") as f:
         text += f.read()
     text += "\n\n\n;START\n"
 
-    lx: float = x[0]
-    ly: float = y[0]
-    lz: float = z[0]
-    for cx, cy, cz in zip(x, y, z):
+    lx: float = points[0].x
+    ly: float = points[0].y
+    lz: float = height_at_layer(0)
+    for cx, cy, cz, extrude in [
+        (p.x, p.y, height_at_layer(p.layer), p.extude) for p in points
+    ]:
         if cx < 0.0:
             cx = 0
         elif cx > settings["bed_width"]:
@@ -183,24 +191,24 @@ def generate_gcode(path):
         elif cz > 200.0:
             cz = 200.0
 
-        extrude: float = 0.0
+        extrusion: float = 0.0
         vals = []
         if not np.isclose(cx, lx, atol=0.001):
             vals.append(f"X{cx:.3f}")
-            extrude += (cx - lx) ** 2.0
+            extrusion += (cx - lx) ** 2.0
 
         if not np.isclose(cy, ly, atol=0.001):
             vals.append(f"Y{cy:.3f}")
-            extrude += (cy - ly) ** 2.0
+            extrusion += (cy - ly) ** 2.0
 
         if not np.isclose(cz, lz, atol=0.001):
             vals.append(f"Z{cz:.3f}")
-            extrude += (cz - lz) ** 2.0
+            extrusion = -0.05
 
-        extrude = settings["flow_rate"] * np.sqrt(extrude)
+        extrusion = settings["flow_rate"] * np.sqrt(extrusion)
         # If no extrusion, ignore
-        if not np.isclose(extrude, 0.0, atol=0.001):
-            vals.append(f"E{extrude:.3f}")
+        if extrude and not np.isclose(extrusion, 0.0, atol=0.001):
+            vals.append(f"E{extrusion:.3f}")
 
             text += f"G1 {' '.join(vals)}\n"
 
