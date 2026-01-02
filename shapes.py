@@ -117,7 +117,7 @@ def match_xyz(line: str):
     return [extract("x"), extract("y"), extract("z"), extract("e")]
 
 
-def display_gcode_file(path):
+def display_gcode(gcode_file):
     x = [0.0]
     y = [0.0]
     z = [0.0]
@@ -125,7 +125,7 @@ def display_gcode_file(path):
     ave_ratio = 0.0
     num_ratio = 0
 
-    with open(path) as f:
+    with open(gcode_file) as f:
         for line in f.readlines():
             m = match_xyz(line)
             if m is not None:
@@ -161,25 +161,25 @@ def display_gcode_file(path):
     display(x, y, z)
 
 
-def display_curve(_):
-    x, y, z = curve()
-    display(x, y, z)
+def display_curve():
+    display(curve())
 
 
 def height_at_layer(layer: int):
     return settings["first_layer_height"] + (layer * settings["layer_height"])
 
 
-def generate_curve(path):
-    generate_gcode(path, curve())
+def generate_curve(output_file):
+    generate_gcode(output_file, curve())
 
 
-def generate_svg(path):
-    generate_gcode(path, svg_to_path.generate_path_from_svg(path, 200, 50, settings))
+def generate_svg(svg_file, output_file):
+    generate_gcode(
+        output_file, svg_to_path.generate_path_from_svg(svg_file, 200, 50, settings)
+    )
 
 
-
-def generate_gcode(path, points: list[GcodePoint]):
+def generate_gcode(output_file, points: list[GcodePoint]):
     text = ""
     with open("Fragments/starter.gcode", "r") as f:
         text += f.read()
@@ -235,34 +235,49 @@ def generate_gcode(path, points: list[GcodePoint]):
         text += "\n;END\n\n\n"
         text += f.read()
 
-    with open(path, "w") as f:
+    with open(output_file, "w") as f:
         f.write(text)
 
 
-def display_svg(path):
-    points = svg_to_path.generate_path_from_svg(path, 200, 50, settings)
-    display(points)
+def display_svg(gcode_file):
+    display(svg_to_path.generate_path_from_svg(gcode_file, 200, 50, settings))
 
 
-commands: dict[str, tuple[Any, int]] = {
-    "disp-file": (display_gcode_file, 1),
-    "disp-curve": (display_curve, 1),
-    "gen-curve": (generate_curve, 1),
-    "disp-svg": (display_svg, 1),
-    "gen-svg": (generate_svg, 1),
+commands: dict[str, tuple[Any, list[str]]] = {
+    "disp-gcode": (display_gcode, ["gcode file"]),
+    "disp-curve": (display_curve, []),
+    "gen-curve": (generate_curve, ["output file"]),
+    "disp-svg": (display_svg, ["svg file"]),
+    "gen-svg": (generate_svg, ["svg file", "output file"]),
 }
 
 
-if len(sys.argv) <= 2:
-    print(f"Usage: {sys.argv[0]} <command> <file>")
+def format_command(command_name: str, command: tuple[Any, list[str]]):
+    return f"{command_name} {' '.join([f'<{arg}>' for arg in command[1]])}"
+
+
+if len(sys.argv) <= 1:
+    print(f"Usage:\n\t{sys.argv[0]} <command> [args]")
     exit(1)
 
-command_name = sys.argv[1]
-file = sys.argv[2]
+command_name = sys.argv[1].strip().lstrip("-").lower()
+if command_name == "h" or command_name == "help":
+    for command in commands:
+        print(format_command(command, commands[command]))
+    exit(0)
+
 
 command = commands.get(command_name)
 if command is None:
-    print(f'command unknown "{command_name}"')
+    print(f'Command unknown "{command_name}."\nUse "help" for list of commands.')
     exit(2)
 
-command[0](file)
+if len(sys.argv) <= len(command[1]) + 1:
+    print(f"Usage:\n\t{sys.argv[0]} {format_command(command_name, command)}")
+    exit(3)
+
+args = {}
+for i, arg in enumerate(command[1]):
+    args[arg.replace(" ", "_")] = sys.argv[i + 2]
+
+command[0](**args)

@@ -20,8 +20,12 @@ def points_in_each_seg(path, tvals):
 
 def generate_path_from_svg(
     svg_path, steps: int, layers: int, settings: dict[str, float]
-):
+) -> list[GcodePoint]:
     paths = svg2paths2(svg_path)[0]
+
+    if len(paths) <= 0:
+        print("No paths in svg.")
+        return []
 
     points: list[GcodePoint] = []
 
