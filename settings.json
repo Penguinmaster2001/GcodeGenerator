@@ -1,0 +1,12 @@
+{
+    "settings": {
+        "bed_width": 200.0,
+        "bed_depth": 200.0,
+        "flow_rate": 0.55,
+        "first_layer_height": 0.15,
+        "layer_height": 0.1,
+        "extruder_temp": 210,
+        "bed_temp": 80,
+        "retraction_distance": 0.1
+    }
+}

@@ -1,6 +1,7 @@
 #! /bin/python
 
 
+import json
 import re
 import sys
 from typing import Any
@@ -15,13 +16,8 @@ from gcode_types import GcodePoint
 mplstyle.use(["dark_background", "ggplot", "fast"])
 
 
-settings = {
-    "bed_width": 200.0,
-    "bed_depth": 200.0,
-    "flow_rate": 0.50,
-    "first_layer_height": 0.2,
-    "layer_height": 0.1,
-}
+with open("settings.json", "r") as f:
+    settings = json.load(f)["settings"]
 
 
 def display(points):
@@ -230,7 +226,7 @@ def generate_gcode(output_file: str, points: list[GcodePoint]):
             # Retract
             if not extrude:
                 extrusion = -0.05
-                
+
             vals.append(f"E{extrusion:.3f}")
 
             text += f"G1 {' '.join(vals)}\n"
