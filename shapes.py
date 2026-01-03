@@ -183,7 +183,7 @@ def generate_svg(svg_file, output_file):
     )
 
 
-def generate_gcode(output_file, points: list[GcodePoint]):
+def generate_gcode(output_file: str, points: list[GcodePoint]):
     text = ""
     with open("Fragments/starter.gcode", "r") as f:
         text += f.read()
@@ -222,11 +222,15 @@ def generate_gcode(output_file, points: list[GcodePoint]):
 
         if not np.isclose(cz, lz, atol=0.001):
             vals.append(f"Z{cz:.3f}")
-            extrusion = 0.0
+            extrude = False
 
         extrusion = settings["flow_rate"] * np.sqrt(extrusion)
         # If no extrusion, ignore
-        if extrude and not np.isclose(extrusion, 0.0, atol=0.001):
+        if not np.isclose(extrusion, 0.0, atol=0.001):
+            # Retract
+            if not extrude:
+                extrusion = -0.05
+                
             vals.append(f"E{extrusion:.3f}")
 
             text += f"G1 {' '.join(vals)}\n"
@@ -243,8 +247,8 @@ def generate_gcode(output_file, points: list[GcodePoint]):
         f.write(text)
 
 
-def display_svg(gcode_file):
-    display(svg_to_path.generate_path_from_svg(gcode_file, 200, 50, settings))
+def display_svg(svg_file):
+    display(svg_to_path.generate_path_from_svg(svg_file, 200, 50, settings))
 
 
 commands: dict[str, tuple[Any, list[str]]] = {
