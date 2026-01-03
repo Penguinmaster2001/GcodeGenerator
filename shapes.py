@@ -15,21 +15,53 @@ from gcode_types import GcodePoint
 
 mplstyle.use(["dark_background", "ggplot", "fast"])
 
-
+settings: dict[str, float] = {
+    "bed_width": 200.0,
+    "bed_depth": 200.0,
+    "flow_rate": 0.55,
+    "first_layer_height": 0.15,
+    "layer_height": 0.1,
+    "extruder_temp": 210,
+    "bed_temp": 80,
+    "retraction_distance": 0.1,
+}
 with open("settings.json", "r") as f:
     settings = json.load(f)["settings"]
 
 
-def display(points):
-    x_pts = []
-    y_pts = []
-    z_pts = []
-    for x, y, z in [(p.x, p.y, height_at_layer(p.layer)) for p in points]:
-        x_pts.append(x)
-        y_pts.append(y)
-        z_pts.append(z)
+# def display(points):
+#     x_pts = []
+#     y_pts = []
+#     z_pts = []
+#     for x, y, z in [(p.x, p.y, height_at_layer(p.layer)) for p in points]:
+#         x_pts.append(x)
+#         y_pts.append(y)
+#         z_pts.append(z)
 
-    display_xyz(x_pts, y_pts, z_pts)
+
+#     display_xyz(x_pts, y_pts, z_pts)
+def display(points):
+    xs_e, ys_e, zs_e = [], [], []
+    xs_t, ys_t, zs_t = [], [], []
+    for p in points:
+        x, y, z = p.x, p.y, height_at_layer(p.layer)
+        if p.extrude:
+            xs_e.append(x)
+            ys_e.append(y)
+            zs_e.append(z)
+        else:
+            xs_t.append(x)
+            ys_t.append(y)
+            zs_t.append(z)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection="3d")
+    ax.plot(xs_e, ys_e, zs_e, color="blue")
+    ax.plot(xs_t, ys_t, zs_t, color="red", alpha=0.4)
+    ax.set_box_aspect([1, 1, 0.4])  # x:y:z ratio
+    
+    ax.set_aspect("equal")
+    plt.show()
 
 
 def display_xyz(x, y, z):
@@ -175,7 +207,7 @@ def generate_curve(output_file):
 
 def generate_svg(svg_file, output_file):
     generate_gcode(
-        output_file, svg_to_path.generate_path_from_svg(svg_file, 200, 50, settings)
+        output_file, svg_to_path.generate_path_from_svg(svg_file, 500, 50, settings)
     )
 
 
@@ -189,7 +221,7 @@ def generate_gcode(output_file: str, points: list[GcodePoint]):
     ly: float = points[0].y
     lz: float = height_at_layer(0)
     for cx, cy, cz, extrude in [
-        (p.x, p.y, height_at_layer(p.layer), p.extude) for p in points
+        (p.x, p.y, height_at_layer(p.layer), p.extrude) for p in points
     ]:
         if cx < 0.0:
             cx = 0
@@ -225,7 +257,8 @@ def generate_gcode(output_file: str, points: list[GcodePoint]):
         if not np.isclose(extrusion, 0.0, atol=0.001):
             # Retract
             if not extrude:
-                extrusion = -0.05
+                # extrusion = -settings["retraction_distance"]
+                extrusion = 0.0
 
             vals.append(f"E{extrusion:.3f}")
 
@@ -244,7 +277,7 @@ def generate_gcode(output_file: str, points: list[GcodePoint]):
 
 
 def display_svg(svg_file):
-    display(svg_to_path.generate_path_from_svg(svg_file, 200, 50, settings))
+    display(svg_to_path.generate_path_from_svg(svg_file, 500, 50, settings))
 
 
 commands: dict[str, tuple[Any, list[str]]] = {

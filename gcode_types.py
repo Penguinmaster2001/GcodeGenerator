@@ -3,4 +3,4 @@ class GcodePoint:
         self.x = x
         self.y = y
         self.layer = layer
-        self.extude = extrude
+        self.extrude = extrude
